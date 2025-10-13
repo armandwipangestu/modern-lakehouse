@@ -1,0 +1,175 @@
+services:
+  minio:
+    image: minio/minio:RELEASE.2024-11-07T00-52-20Z
+    container_name: minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_SERVER_URL: http://minio:9000
+    volumes:
+      - ./docker-data/minio/data:/data
+    command: server /data --address ":9000" --console-address ":9001"
+    networks:
+      - bridge
+
+  mariadb-nessie:
+    image: mariadb:11.4.5-noble
+    container_name: mariadb-nessie
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: nessie
+      MYSQL_USER: nessie
+      MYSQL_PASSWORD: nessie
+    volumes:
+      - ./docker-data/mariadb-nessie/data:/var/lib/mysql
+    networks:
+      - bridge
+
+  nessie:
+    image: ghcr.io/projectnessie/nessie:0.99.0
+    container_name: nessie
+    restart: unless-stopped
+    ports:
+      - "19120:19120"
+      - "9990:9000"
+    environment:
+      NESSIE_VERSION_STORE_TYPE: JDBC
+      NESSIE_VERSION_STORE_PERSIST_JDBC_DATASOURCE: mariadb
+      QUARKUS_DATASOURCE_MARIADB_JDBC_URL: jdbc:mariadb://mariadb-nessie:3306/nessie
+      QUARKUS_DATASOURCE_MARIADB_USERNAME: nessie
+      QUARKUS_DATASOURCE_MARIADB_PASSWORD: nessie
+    networks:
+      - bridge
+    depends_on:
+      - mariadb-nessie
+
+  dremio:
+    image: dremio/dremio-oss:26.0
+    container_name: dremio
+    restart: unless-stopped
+    ports:
+      - "9047:9047"
+      - "31010:31010"
+      - "32010:32010"
+      - "9191:9191"
+    volumes:
+      - ./docker-data/dremio/data:/opt/dremio/data
+      - ./docker-data/dremio/javalib-security:/opt/java/openjdk/lib/security
+      - ./docker-data/dremio/log:/opt/dremio/log
+      - ./docker-data/dremio/bin:/opt/dremio/bin
+      # Uncomment the next line after copying the /opt/dremio/conf directory from the container to your local directory to persists Dremio configurations
+      - ./docker-data/dremio/conf:/opt/dremio/conf
+    networks:
+      - bridge
+    depends_on:
+      - minio
+      - nessie
+
+  nifi-registry:
+    image: apache/nifi-registry:2.6.0
+    container_name: nifi-registry
+    restart: unless-stopped
+    ports:
+      - "18080:18080"
+    environment:
+      LOG_LEVEL: INFO
+      NIFI_REGISTRY_DB_DIR: /opt/nifi-registry/nifi-registry-current/database
+      NIFI_REGISTRY_FLOW_PROVIDER: file
+      NIFI_REGISTRY_FLOW_STORAGE_DIR: /opt/nifi-registry/nifi-registry-current/flow_storage
+    volumes:
+      - ./docker-data/nifi-registry/database:/opt/nifi-registry/nifi-registry-current/database
+      - ./docker-data/nifi-registry/flow_storage:/opt/nifi-registry/nifi-registry-current/flow_storage
+    networks:
+      - bridge
+
+  nifi:
+    image: apache/nifi:1.28.0
+    container_name: nifi
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+      - "10000:10000"
+      - "9999:9999"
+    environment:
+      NIFI_WEB_HTTP_PORT: "8080"
+      NIFI_CLUSTER_IS_NODE: "false"
+      SINGLE_USER_CREDENTIALS_USERNAME: admin
+      SINGLE_USER_CREDENTIALS_PASSWORD: admin
+      NIFI_WEB_PROXY_HOST: "8080,0.0.0.0:8080,localhost:8080,nifi:8080"
+    volumes:
+      - ./docker-data/nifi/database_repository:/opt/nifi/nifi-current/database_repository
+      - ./docker-data/nifi/flowfile_repository:/opt/nifi/nifi-current/flowfile_repository
+      - ./docker-data/nifi/content_repository:/opt/nifi/nifi-current/content_repository
+      - ./docker-data/nifi/provenance_repository:/opt/nifi/nifi-current/provenance_repository
+      - ./docker-data/nifi/state:/opt/nifi/nifi-current/state
+      - ./docker-data/nifi/logs:/opt/nifi/nifi-current/logs
+      # Uncomment the next line after copying the /conf directory from the container to your local directory to persists NiFi configurations
+      - ./docker-data/nifi/conf:/opt/nifi/nifi-current/conf
+      - ./docker-data/nifi/lib:/opt/nifi/nifi-current/lib
+    depends_on:
+      - nifi-registry
+
+  postgres-metabase:
+    image: postgres:17-bookworm
+    container_name: postgres-metabase
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: metabase
+      POSTGRES_USER: metabase
+      POSTGRES_PASSWORD: metabase
+    volumes:
+      - ./docker-data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - bridge
+
+  metabase:
+    image: metabase/metabase:v0.56.9.x
+    container_name: metabase
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5432
+      MB_DB_USER: metabase
+      MB_DB_PASS: metabase
+      MB_DB_HOST: postgres-metabase
+    volumes:
+      # Uncomment the next line after copying the /plugins directory from the container to your local directory to persists metabase plugins
+      - ./docker-data/metabase/plugins:/plugins
+    depends_on:
+      - postgres-metabase
+    networks:
+      - bridge
+
+  sftp-server:
+    image: atmoz/sftp:alpine
+    container_name: sftp-server
+    restart: unless-stopped
+    ports:
+      - "2222:22"
+    volumes:
+      - ./docker-data/sftp/upload:/home/sftpuser/upload
+    command: sftpuser:sftppass:::upload
+    networks:
+      - bridge
+
+networks:
+  bridge:
+    driver: bridge
