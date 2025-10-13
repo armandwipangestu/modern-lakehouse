@@ -101,7 +101,7 @@ services:
       NIFI_WEB_HTTP_PORT: "8080"
       NIFI_CLUSTER_IS_NODE: "false"
       SINGLE_USER_CREDENTIALS_USERNAME: admin
-      SINGLE_USER_CREDENTIALS_PASSWORD: admin
+      SINGLE_USER_CREDENTIALS_PASSWORD: admin1234567
       NIFI_WEB_PROXY_HOST: "8080,0.0.0.0:8080,localhost:8080,nifi:8080"
     volumes:
       - ./docker-data/nifi/database_repository:/opt/nifi/nifi-current/database_repository
