@@ -60,11 +60,11 @@ services:
       - "32010:32010"
       - "9191:9191"
     volumes:
+      # Uncomment the next line after copying the /opt/dremio/conf directory from the container to your local directory to persists Dremio configurations
       - ./docker-data/dremio/data:/opt/dremio/data
       - ./docker-data/dremio/javalib-security:/opt/java/openjdk/lib/security
       - ./docker-data/dremio/log:/opt/dremio/log
       - ./docker-data/dremio/bin:/opt/dremio/bin
-      # Uncomment the next line after copying the /opt/dremio/conf directory from the container to your local directory to persists Dremio configurations
       - ./docker-data/dremio/conf:/opt/dremio/conf
     networks:
       - bridge
