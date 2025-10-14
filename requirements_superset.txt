@@ -1,0 +1,2 @@
+sqlalchemy-dremio-flight==1.2.6
+sqlalchemy_dremio==3.0.4

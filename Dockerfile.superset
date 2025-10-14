@@ -1,0 +1,16 @@
+FROM apache/superset:latest
+
+USER root
+
+# Copy temporary script to install inside venv after it's created
+# COPY install_lib_superset.sh /app/docker-entrypoint-init.d/install_lib_superset.sh
+# RUN chmod +x /app/docker-entrypoint-init.d/install_lib_superset.sh
+
+# RUN python3 -m ensurepip
+
+# RUN . /app/.venv/bin/activate && \
+#     pip install --no-cache-dir sqlalchemy-dremio-flight==1.2.6 sqlalchemy_dremio==3.0.4
+
+COPY requirements_superset.txt /app/pythonpath/
+
+USER superset

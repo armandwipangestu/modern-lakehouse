@@ -116,45 +116,82 @@ services:
     depends_on:
       - nifi-registry
 
-  postgres-metabase:
-    image: postgres:17-bookworm
-    container_name: postgres-metabase
-    restart: unless-stopped
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_DB: metabase
-      POSTGRES_USER: metabase
-      POSTGRES_PASSWORD: metabase
-    volumes:
-      - ./docker-data/postgres:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    networks:
-      - bridge
+  # postgres-metabase:
+  #   image: postgres:17-bookworm
+  #   container_name: postgres-metabase
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5432:5432"
+  #   environment:
+  #     POSTGRES_DB: metabase
+  #     POSTGRES_USER: metabase
+  #     POSTGRES_PASSWORD: metabase
+  #   volumes:
+  #     - ./docker-data/postgres:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+  #     start_period: 10s
+  #   networks:
+  #     - bridge
 
-  metabase:
-    image: metabase/metabase:v0.56.9.x
-    container_name: metabase
+  # metabase:
+  #   image: metabase/metabase:v0.51.x
+  #   container_name: metabase
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     MB_DB_TYPE: postgres
+  #     MB_DB_DBNAME: metabase
+  #     MB_DB_PORT: 5432
+  #     MB_DB_USER: metabase
+  #     MB_DB_PASS: metabase
+  #     MB_DB_HOST: postgres-metabase
+  #   volumes:
+  #     # Uncomment the next line after copying the /plugins directory from the container to your local directory to persists metabase plugins
+  #     - ./docker-data/metabase/plugins:/plugins
+  #   depends_on:
+  #     - postgres-metabase
+  #   networks:
+  #     - bridge
+
+  # After running this container, execute the following command to initialize superset:
+  # ```bash
+  # docker exec -it superset superset db upgrade
+  # docker exec -it superset superset fab create-admin \
+  # --username admin \
+  # --firstname Admin \
+  # --lastname User \
+  # --email admin@superset.local \
+  # --password admin
+  # docker exec -it superset superset init
+  # docker restart superset
+  # ```
+  superset:
+    image: alexmerced/dremio-superset
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile.superset
+    container_name: superset
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "8088:8088"
     environment:
-      MB_DB_TYPE: postgres
-      MB_DB_DBNAME: metabase
-      MB_DB_PORT: 5432
-      MB_DB_USER: metabase
-      MB_DB_PASS: metabase
-      MB_DB_HOST: postgres-metabase
+      - SUPERSET_SECRET_KEY=supersetsecret
+      - ADMIN_USERNAME=admin
+      - ADMIN_FIRST_NAME=Admin
+      - ADMIN_LAST_NAME=User
+      - ADMIN_EMAIL=admin@superset.local
+      - ADMIN_PASSWORD=admin
+    # command: >
+    #   bash -c "
+    #     superset init
+    #   "
     volumes:
-      # Uncomment the next line after copying the /plugins directory from the container to your local directory to persists metabase plugins
-      - ./docker-data/metabase/plugins:/plugins
-    depends_on:
-      - postgres-metabase
+      - ./docker-data/superset/data:/app/superset_home
     networks:
       - bridge
 
