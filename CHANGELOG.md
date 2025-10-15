@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/armandwipangestu/modern-lakehouse/compare/v1.1.0...v1.1.1) (2025-10-15)
+
+
+### Bug Fixes
+
+* add networks at nifi container ([8d44bd3](https://github.com/armandwipangestu/modern-lakehouse/commit/8d44bd3b28d3bb0447259d42f10f53fb8d0bd9a4))
+
 # [1.1.0](https://github.com/armandwipangestu/modern-lakehouse/compare/v1.0.1...v1.1.0) (2025-10-14)
 
 
