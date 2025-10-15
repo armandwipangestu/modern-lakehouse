@@ -113,6 +113,8 @@ services:
       # Uncomment the next line after copying the /conf directory from the container to your local directory to persists NiFi configurations
       - ./docker-data/nifi/conf:/opt/nifi/nifi-current/conf
       - ./docker-data/nifi/lib:/opt/nifi/nifi-current/lib
+    networks:
+      - bridge
     depends_on:
       - nifi-registry
 
